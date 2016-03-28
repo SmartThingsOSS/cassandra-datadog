@@ -1,0 +1,75 @@
+apply plugin: "maven-publish"
+apply plugin: 'com.jfrog.bintray'
+
+ext.isSnapshot = version.endsWith("SNAPSHOT")
+
+task sourceJar(type: Jar) {
+	classifier "sources"
+	from sourceSets.main.allJava
+}
+
+if (isSnapshot) {
+	if (project.hasProperty('smartThingsUserName')) {
+		publishing {
+			publications {
+				main(MavenPublication) {
+					from components.java
+					artifact sourceJar
+				}
+			}
+			repositories {
+				maven {
+					credentials {
+						username smartThingsUserName
+						password smartThingsPassword
+					}
+					url "https://smartthings.artifactoryonline.com/smartthings/libs-snapshot-local"
+				}
+			}
+		}
+	}
+} else {
+	publishing {
+		publications {
+			mavenJava(MavenPublication) {
+				from components.java
+				artifact sourceJar
+			}
+		}
+	}
+}
+
+bintrayUpload { task ->
+	doFirst {
+		if (isSnapshot) {
+			throw new GradleException('Cannot publish SNAPSHOT versions to BinTray!')
+		}
+	}
+	gradle.taskGraph.whenReady { taskGraph ->
+		if (taskGraph.hasTask(task)) {
+			task.user = System.getenv('BINTRAY_USER') ?: ''
+			task.apiKey = System.getenv('BINTRAY_API_KEY') ?: ''
+		}
+	}
+}
+
+bintray {
+	publications = ['mavenJava']
+	dryRun = false
+	publish = true
+	pkg {
+		repo = 'maven'
+		name = 'smartthings.cassandra-datadog'
+		userOrg = 'smartthingsoss'
+		licenses = ['Apache-2.0']
+		desc = 'Publish cassandra metrics into datadog'
+		labels = ['cassandra']
+		websiteUrl = 'https://github.com/SmartThingsOSS/cassandra-datadog'
+		issueTrackerUrl = 'https://github.com/SmartThingsOSS/cassandra-datadog/issues'
+		vcsUrl = 'https://github.com/SmartThingsOSS/cassandra-datadog.git'
+		version {
+			name = project.version
+			vcsTag = project.version
+		}
+	}
+}

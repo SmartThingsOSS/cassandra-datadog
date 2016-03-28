@@ -1,0 +1,11 @@
+.gradle
+target/
+build/
+.idea
+*.iml
+*.ipr
+*.iws
+.java-version
+scratch.txt
+
+.DS_Store
